@@ -146,7 +146,7 @@ fn main() -> Result<()> {
                 .collect::<Vec<_>>();
 
             for exercise in &exercises {
-                let fname = format!("{}", exercise.path.display());
+                let fname = exercise.path.to_string_lossy();
                 let filter_cond = filters
                     .iter()
                     .any(|f| exercise.name.contains(f) || fname.contains(f));
