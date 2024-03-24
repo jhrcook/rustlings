@@ -12,7 +12,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
@@ -93,7 +93,16 @@ fn main() -> Result<()> {
         println!("\n{WELCOME}\n");
     }
 
-    if !rustc_exists() {
+    if !Path::new("info.toml").exists() {
+        println!(
+            "{} must be run from the rustlings directory",
+            std::env::current_exe().unwrap().to_str().unwrap()
+        );
+        println!("Try `cd rustlings/`!");
+        std::process::exit(1);
+    }
+
+    if which::which("rustc").is_err() {
         println!("We cannot find `rustc`.");
         println!("Try running `rustc --version` to diagnose your problem.");
         println!("For instructions on how to install Rust, check the README.");
@@ -411,18 +420,6 @@ fn watch(
             return Ok(WatchStatus::Unfinished);
         }
     }
-}
-
-fn rustc_exists() -> bool {
-    Command::new("rustc")
-        .args(["--version"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .stdin(Stdio::null())
-        .spawn()
-        .and_then(|mut child| child.wait())
-        .map(|status| status.success())
-        .unwrap_or(false)
 }
 
 const DEFAULT_OUT: &str = r#"Thanks for installing Rustlings!
