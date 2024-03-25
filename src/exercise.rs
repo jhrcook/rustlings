@@ -3,11 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use std::fs::{self, remove_file, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
-use std::process::{self, exit, Command};
-use std::{array, env, mem};
-use winnow::ascii::{space0, Caseless};
-use winnow::combinator::opt;
-use winnow::Parser;
+use std::process::{self, Command, Stdio};
 
 const RUSTC_COLOR_ARGS: &[&str] = &["--color", "always"];
 const RUSTC_EDITION_ARGS: &[&str] = &["--edition", "2021"];
@@ -162,7 +158,10 @@ path = "{}.rs""#,
                     .args(RUSTC_COLOR_ARGS)
                     .args(RUSTC_EDITION_ARGS)
                     .args(RUSTC_NO_DEBUG_ARGS)
-                    .output()
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
                     .expect("Failed to compile!");
                 // Due to an issue with Clippy, a cargo clean is required to catch all lints.
                 // See https://github.com/rust-lang/rust-clippy/issues/2604
@@ -171,7 +170,10 @@ path = "{}.rs""#,
                 Command::new("cargo")
                     .args(["clean", "--manifest-path", CLIPPY_CARGO_TOML_PATH])
                     .args(RUSTC_COLOR_ARGS)
-                    .output()
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
                     .expect("Failed to run 'cargo clean'");
                 Command::new("cargo")
                     .args(["clippy", "--manifest-path", CLIPPY_CARGO_TOML_PATH])
