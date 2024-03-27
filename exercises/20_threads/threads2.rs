@@ -7,7 +7,6 @@
 // Execute `rustlings hint threads2` or use the `hint` watch subcommand for a
 // hint.
 
-
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -28,6 +27,8 @@ fn main() {
         });
         handles.push(handle);
     }
+
+    // Waiting for all jobs to complete
     for handle in handles {
         handle.join().unwrap();
         // TODO: Print the value of the JobStatus.jobs_completed. Did you notice
@@ -35,4 +36,7 @@ fn main() {
         // handles?
         println!("jobs completed {}", status.lock().unwrap().jobs_completed);
     }
+
+    // TODO: Print the value of `JobStatus.jobs_completed`
+    println!("Jobs completed: {}", ???);
 }
