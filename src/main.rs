@@ -93,15 +93,6 @@ fn main() -> Result<()> {
         println!("\n{WELCOME}\n");
     }
 
-    if !Path::new("info.toml").exists() {
-        println!(
-            "{} must be run from the rustlings directory",
-            std::env::current_exe().unwrap().to_str().unwrap()
-        );
-        println!("Try `cd rustlings/`!");
-        std::process::exit(1);
-    }
-
     if which::which("rustc").is_err() {
         println!("We cannot find `rustc`.");
         println!("Try running `rustc --version` to diagnose your problem.");
@@ -264,40 +255,44 @@ fn spawn_watch_shell(
     should_quit: Arc<AtomicBool>,
 ) {
     println!("Welcome to watch mode! You can type 'help' to get an overview of the commands you can use here.");
-    thread::spawn(move || loop {
-        let mut input = String::new();
-        match io::stdin().read_line(&mut input) {
-            Ok(_) => {
-                let input = input.trim();
-                if input == "hint" {
-                    if let Some(hint) = &*failed_exercise_hint.lock().unwrap() {
-                        println!("{hint}");
-                    }
-                } else if input == "clear" {
-                    println!("\x1B[2J\x1B[1;1H");
-                } else if input.eq("quit") {
-                    should_quit.store(true, Ordering::SeqCst);
-                    println!("Bye!");
-                } else if input.eq("help") {
-                    println!("Commands available to you in watch mode:");
-                    println!("  hint   - prints the current exercise's hint");
-                    println!("  clear  - clears the screen");
-                    println!("  quit   - quits watch mode");
-                    println!("  !<cmd> - executes a command, like `!rustc --explain E0381`");
-                    println!("  help   - displays this help message");
-                    println!();
-                    println!("Watch mode automatically re-evaluates the current exercise");
-                    println!("when you edit a file's contents.")
-                } else if let Some(cmd) = input.strip_prefix('!') {
-                    let parts: Vec<&str> = cmd.split_whitespace().collect();
-                    if parts.is_empty() {
-                        println!("no command provided");
-                    } else if let Err(e) = Command::new(parts[0]).args(&parts[1..]).status() {
-                        println!("failed to execute command `{cmd}`: {e}");
-                    }
-                } else {
-                    println!("unknown command: {input}");
+
+    thread::spawn(move || {
+        let mut input = String::with_capacity(32);
+        let mut stdin = io::stdin().lock();
+
+        loop {
+            // Recycle input buffer.
+            input.clear();
+
+            if let Err(e) = stdin.read_line(&mut input) {
+                println!("error reading command: {e}");
+            }
+
+            let input = input.trim();
+            if input == "hint" {
+                if let Some(hint) = &*failed_exercise_hint.lock().unwrap() {
+                    println!("{hint}");
                 }
+            } else if input == "clear" {
+                println!("\x1B[2J\x1B[1;1H");
+            } else if input == "quit" {
+                should_quit.store(true, Ordering::SeqCst);
+                println!("Bye!");
+            } else if input == "help" {
+                println!("{WATCH_MODE_HELP_MESSAGE}");
+            } else if let Some(cmd) = input.strip_prefix('!') {
+                let mut parts = Shlex::new(cmd);
+
+                let Some(program) = parts.next() else {
+                    println!("no command provided");
+                    continue;
+                };
+
+                if let Err(e) = Command::new(program).args(parts).status() {
+                    println!("failed to execute command `{cmd}`: {e}");
+                }
+            } else {
+                println!("unknown command: {input}\n{WATCH_MODE_HELP_MESSAGE}");
             }
         }
     });
@@ -412,18 +407,6 @@ fn watch(
             return Ok(WatchStatus::Unfinished);
         }
     }
-}
-
-fn rustc_exists() -> bool {
-    Command::new("rustc")
-        .args(["--version"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .stdin(Stdio::null())
-        .spawn()
-        .and_then(|mut child| child.wait())
-        .map(|status| status.success())
-        .unwrap_or(false)
 }
 
 const DEFAULT_OUT: &str = "Thanks for installing Rustlings!

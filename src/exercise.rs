@@ -3,7 +3,11 @@ use std::fmt::{self, Display, Formatter};
 use std::fs::{self, remove_file, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::PathBuf;
-use std::process::{self, Command, Stdio};
+use std::process::{self, exit, Command, Stdio};
+use std::{array, env, mem};
+use winnow::ascii::{space0, Caseless};
+use winnow::combinator::opt;
+use winnow::Parser;
 
 const RUSTC_COLOR_ARGS: &[&str] = &["--color", "always"];
 const RUSTC_EDITION_ARGS: &[&str] = &["--edition", "2021"];
